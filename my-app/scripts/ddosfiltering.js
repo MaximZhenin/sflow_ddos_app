@@ -22,7 +22,7 @@ var macToMember = {};
 var ipGroups = {};
 var numMembers = 0;
 var numMacs = 0;
-
+var flag = false;
 
 var groups = storeGet('groups') || defaultGroups;
 var externalGroup = getSystemProperty("ddos_protect.externalgroup") || 'external';
@@ -157,10 +157,22 @@ setEventHandler(function(evt) {
   logInfo("SetEventHandler");
   var key = evt.thresholdID+'-'+evt.flowKey;
   if(controls[key]) return;
-
+  var port = topologyInterfaceToPort(evt.agent,evt.dataSource);
+  var msg = {
+    priority:4000,
+    dpid:port.dpid,
+    match: {
+     in_port:port.ofport,
+     dl_type:0x800,
+     nw_dst:ipdestination+'/32',
+     nw_proto:17,
+     tp_src:udpsourceport 
+    }
+   };
+  logInfo(msg);
   // don't allow data from data sources with sampling rates close to threshold
   // avoids false positives due the insufficient samples
-  if(false) {
+  if(flag) {
     logInfo("dsInfo" + evt.agent + "     "+ evt.dataSource);
     let dsInfo = datasourceInfo(evt.agent,evt.dataSource);
     if(!dsInfo) return;
@@ -288,7 +300,6 @@ setIntervalHandler(function(now) {
 }, 5);
 
 /*
-var ryu = '127.0.0.1';
 var controls = {};
 var keys = 'ipdestination,group:ipdestination:ddos_protect';
 setFlow('ddos_protect_udp_flood', {
